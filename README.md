@@ -113,4 +113,4 @@ This application is designed to be deployed on **Vercel**.
 
 ---
 
-Built with ❤️ by [Sagar](sagar-patil.vercel.app)
+Built with ❤️ by [Sagar](https://sagar-patil.vercel.app)
