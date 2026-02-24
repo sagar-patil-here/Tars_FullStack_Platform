@@ -1,9 +1,30 @@
+"use client";
+
 import Link from "next/link";
 import { MessageSquare, Users, Zap, Shield, ArrowRight, Github, Twitter, Linkedin } from "lucide-react";
+import { SignedIn, SignedOut } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { useAuth } from "@clerk/nextjs";
+
+function RedirectIfSignedIn() {
+  const { isSignedIn, isLoaded } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      router.replace("/chat");
+    }
+  }, [isLoaded, isSignedIn, router]);
+
+  return null;
+}
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 selection:bg-sky-500/30">
+      <RedirectIfSignedIn />
+
       {/* Background Gradient Effects */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-sky-500/10 blur-[120px]" />
@@ -11,7 +32,7 @@ export default function LandingPage() {
       </div>
 
       {/* Navbar */}
-      <nav className="relative z-10 border-b border-slate-800/50 bg-slate-950/50 backdrop-blur-md sticky top-0">
+      <nav className="relative z-50 border-b border-slate-800/50 bg-slate-950/80 backdrop-blur-md sticky top-0">
         <div className="container mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 font-bold text-xl tracking-tight">
             <div className="bg-gradient-to-tr from-sky-400 to-indigo-500 p-2 rounded-lg">
@@ -21,20 +42,32 @@ export default function LandingPage() {
           </div>
           
           <div className="flex items-center gap-4">
-            <Link 
-              href="/sign-in" 
-              className="text-sm font-medium text-slate-300 hover:text-white transition-colors hidden sm:block"
-            >
-              Sign In
-            </Link>
-            <Link 
-              href="/sign-up" 
-              className="group relative inline-flex h-9 items-center justify-center overflow-hidden rounded-full bg-sky-500 px-6 font-medium text-white transition-all duration-300 hover:bg-sky-600 hover:scale-105 hover:shadow-[0_0_20px_-5px_rgba(14,165,233,0.5)]"
-            >
-              <span className="relative flex items-center gap-2">
-                Get Started <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-              </span>
-            </Link>
+            <SignedOut>
+              <Link 
+                href="/sign-in" 
+                className="text-sm font-medium text-slate-300 hover:text-white transition-colors hidden sm:block"
+              >
+                Sign In
+              </Link>
+              <Link 
+                href="/sign-up" 
+                className="group relative inline-flex h-9 items-center justify-center overflow-hidden rounded-full bg-sky-500 px-6 font-medium text-white transition-all duration-300 hover:bg-sky-600 hover:scale-105 hover:shadow-[0_0_20px_-5px_rgba(14,165,233,0.5)]"
+              >
+                <span className="relative flex items-center gap-2">
+                  Get Started <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                </span>
+              </Link>
+            </SignedOut>
+            <SignedIn>
+              <Link 
+                href="/chat" 
+                className="group relative inline-flex h-9 items-center justify-center overflow-hidden rounded-full bg-sky-500 px-6 font-medium text-white transition-all duration-300 hover:bg-sky-600 hover:scale-105 hover:shadow-[0_0_20px_-5px_rgba(14,165,233,0.5)]"
+              >
+                <span className="relative flex items-center gap-2">
+                  Go to Chat <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                </span>
+              </Link>
+            </SignedIn>
           </div>
         </div>
       </nav>
@@ -42,7 +75,7 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="relative z-10 pt-20 pb-32 overflow-hidden">
         <div className="container mx-auto px-6 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs font-medium text-sky-400 mb-8 animate-fade-in-up">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs font-medium text-sky-400 mb-8">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-500"></span>
@@ -60,14 +93,24 @@ export default function LandingPage() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-20">
+            <SignedOut>
+              <Link 
+                href="/sign-up" 
+                className="w-full sm:w-auto px-8 py-4 rounded-full bg-white text-slate-950 font-bold hover:bg-slate-200 transition-all hover:scale-105 shadow-[0_0_40px_-10px_rgba(255,255,255,0.3)]"
+              >
+                Start Chatting Now
+              </Link>
+            </SignedOut>
+            <SignedIn>
+              <Link 
+                href="/chat" 
+                className="w-full sm:w-auto px-8 py-4 rounded-full bg-white text-slate-950 font-bold hover:bg-slate-200 transition-all hover:scale-105 shadow-[0_0_40px_-10px_rgba(255,255,255,0.3)]"
+              >
+                Go to Chat
+              </Link>
+            </SignedIn>
             <Link 
-              href="/sign-up" 
-              className="w-full sm:w-auto px-8 py-4 rounded-full bg-white text-slate-950 font-bold hover:bg-slate-200 transition-all hover:scale-105 shadow-[0_0_40px_-10px_rgba(255,255,255,0.3)]"
-            >
-              Start Chatting Now
-            </Link>
-            <Link 
-              href="https://github.com" 
+              href="https://github.com/sagar-patil-here/Tars_FullStack_Platform" 
               target="_blank"
               className="w-full sm:w-auto px-8 py-4 rounded-full bg-slate-900 text-white border border-slate-800 font-medium hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
             >
@@ -109,7 +152,6 @@ export default function LandingPage() {
               {/* Chat Area Mockup */}
               <div className="col-span-3 p-6 flex flex-col h-full relative">
                 <div className="flex-1 space-y-6">
-                  {/* Received Message */}
                   <div className="flex gap-4">
                     <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-xs font-bold">AI</div>
                     <div className="space-y-1">
@@ -120,7 +162,6 @@ export default function LandingPage() {
                     </div>
                   </div>
 
-                  {/* Sent Message */}
                   <div className="flex gap-4 flex-row-reverse">
                     <div className="w-8 h-8 rounded-full bg-sky-500 flex items-center justify-center text-xs font-bold text-white">SP</div>
                     <div className="space-y-1">
@@ -131,7 +172,6 @@ export default function LandingPage() {
                     </div>
                   </div>
                   
-                  {/* Received Message */}
                   <div className="flex gap-4">
                     <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-xs font-bold">AI</div>
                     <div className="space-y-1">
@@ -161,7 +201,7 @@ export default function LandingPage() {
       </section>
 
       {/* Features Grid */}
-      <section className="py-24 bg-slate-950 relative z-10">
+      <section className="py-24 bg-slate-950 relative z-0">
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Why choose Tars Chat?</h2>
@@ -203,7 +243,7 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-slate-900 py-12 bg-slate-950 relative z-10">
+      <footer className="border-t border-slate-900 py-12 bg-slate-950 relative z-0">
         <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2 font-bold text-lg">
             <div className="bg-sky-500/10 p-1.5 rounded-lg">
@@ -213,12 +253,12 @@ export default function LandingPage() {
           </div>
           
           <div className="text-slate-500 text-sm">
-            © 2026 Tars Chat Application. All rights reserved.
+            &copy; 2026 Tars Chat Application. All rights reserved.
           </div>
 
           <div className="flex gap-6">
             <a href="#" className="text-slate-500 hover:text-white transition-colors"><Twitter className="w-5 h-5" /></a>
-            <a href="#" className="text-slate-500 hover:text-white transition-colors"><Github className="w-5 h-5" /></a>
+            <a href="https://github.com/sagar-patil-here/Tars_FullStack_Platform" target="_blank" className="text-slate-500 hover:text-white transition-colors"><Github className="w-5 h-5" /></a>
             <a href="#" className="text-slate-500 hover:text-white transition-colors"><Linkedin className="w-5 h-5" /></a>
           </div>
         </div>
