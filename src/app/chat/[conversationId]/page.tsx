@@ -27,7 +27,6 @@ export default function ConversationPage() {
     clerkId: user?.id,
   });
 
-  // Get the other user's info from conversations
   const conversations = useQuery(api.conversations.getMyConversations);
   const currentConversation = conversations?.find((c) => c._id === conversationId);
   const otherUser = currentConversation?.otherUser;
@@ -35,49 +34,90 @@ export default function ConversationPage() {
 
   const [input, setInput] = useState("");
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [newMessageCount, setNewMessageCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTypingRef = useRef(false);
+  const prevMessageCountRef = useRef(0);
+  const isNearBottomRef = useRef(true);
 
-  // Mark conversation as read when opening or when new messages arrive
+  // Mark conversation as read
   useEffect(() => {
     if (conversationId && messages && messages.length > 0) {
       markRead({ conversationId }).catch(console.error);
     }
   }, [conversationId, messages, markRead]);
 
-  // Smart auto-scroll
+  // Handle mobile keyboard resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (document.activeElement === inputRef.current) {
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        }, 300);
+      }
+    };
+
+    const visualViewport = window.visualViewport;
+    if (visualViewport) {
+      visualViewport.addEventListener("resize", handleResize);
+      return () => visualViewport.removeEventListener("resize", handleResize);
+    }
+  }, []);
+
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     setShowScrollButton(false);
+    setNewMessageCount(0);
   }, []);
 
-  useEffect(() => {
-    if (!scrollContainerRef.current || !messages) return;
+  // Track whether user is near bottom
+  const checkIfNearBottom = useCallback(() => {
+    if (!scrollContainerRef.current) return true;
     const container = scrollContainerRef.current;
-    const isNearBottom =
-      container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+    return container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+  }, []);
 
-    if (isNearBottom) {
-      scrollToBottom();
-    } else if (messages.length > 0) {
-      setShowScrollButton(true);
+  // When new messages arrive
+  useEffect(() => {
+    if (!messages) return;
+
+    const currentCount = messages.length;
+    const prevCount = prevMessageCountRef.current;
+
+    if (prevCount > 0 && currentCount > prevCount) {
+      const newMsgs = currentCount - prevCount;
+
+      if (isNearBottomRef.current) {
+        scrollToBottom();
+      } else {
+        setNewMessageCount((prev) => prev + newMsgs);
+        setShowScrollButton(true);
+      }
+    } else if (prevCount === 0 && currentCount > 0) {
+      // First load — always scroll to bottom
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+      }, 100);
     }
+
+    prevMessageCountRef.current = currentCount;
   }, [messages, scrollToBottom]);
 
-  // Track scroll position for the "New messages" button
   const handleScroll = () => {
-    if (!scrollContainerRef.current) return;
-    const container = scrollContainerRef.current;
-    const isNearBottom =
-      container.scrollHeight - container.scrollTop - container.clientHeight < 100;
-    if (isNearBottom) {
+    const nearBottom = checkIfNearBottom();
+    isNearBottomRef.current = nearBottom;
+
+    if (nearBottom) {
       setShowScrollButton(false);
+      setNewMessageCount(0);
+    } else {
+      setShowScrollButton(true);
     }
   };
 
-  // Typing indicator logic
   const handleInputChange = (value: string) => {
     setInput(value);
 
@@ -98,7 +138,6 @@ export default function ConversationPage() {
     const trimmed = input.trim();
     if (!trimmed) return;
 
-    // Stop typing indicator immediately
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     isTypingRef.current = false;
     setTyping({ conversationId, isTyping: false }).catch(console.error);
@@ -120,10 +159,16 @@ export default function ConversationPage() {
     }
   };
 
+  const handleInputFocus = () => {
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 400);
+  };
+
   return (
-    <div className="flex flex-col h-full bg-slate-950">
-      {/* Chat Header */}
-      <div className="flex items-center gap-3 p-4 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md shrink-0">
+    <div className="flex flex-col bg-slate-950 overflow-hidden" style={{ height: "100dvh" }}>
+      {/* Chat Header - Fixed at top */}
+      <div className="flex items-center gap-3 p-4 border-b border-slate-800 bg-slate-950 shrink-0 z-30 sticky top-0">
         <button
           onClick={() => router.push("/chat")}
           className="md:hidden p-1 rounded-lg hover:bg-slate-800 transition-colors"
@@ -163,11 +208,11 @@ export default function ConversationPage() {
         </div>
       </div>
 
-      {/* Messages Area */}
+      {/* Messages Area - Only this section scrolls */}
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-4 space-y-4 relative"
+        className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-4 min-h-0"
       >
         {messages === undefined ? (
           <div className="flex flex-col gap-4">
@@ -257,27 +302,36 @@ export default function ConversationPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* New Messages Button */}
+      {/* Scroll to Bottom Button */}
       {showScrollButton && (
-        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-20 md:left-auto md:right-8 md:translate-x-0">
+        <div className="relative z-20 flex justify-center -mt-14 mb-2 pointer-events-none">
           <button
             onClick={scrollToBottom}
-            className="flex items-center gap-1.5 px-4 py-2 bg-sky-500 text-white text-xs font-medium rounded-full shadow-lg hover:bg-sky-600 transition-colors"
+            className="pointer-events-auto flex items-center gap-1.5 px-4 py-2 bg-slate-800 border border-slate-700 text-white text-xs font-medium rounded-full shadow-xl hover:bg-slate-700 transition-colors"
           >
-            <ChevronDown className="w-3.5 h-3.5" />
-            New messages
+            <ChevronDown className="w-4 h-4" />
+            {newMessageCount > 0 ? (
+              <span className="flex items-center gap-1.5">
+                {newMessageCount} new message{newMessageCount > 1 ? "s" : ""}
+                <span className="w-2 h-2 bg-sky-500 rounded-full animate-pulse" />
+              </span>
+            ) : (
+              "Scroll to bottom"
+            )}
           </button>
         </div>
       )}
 
       {/* Message Input */}
-      <div className="p-4 border-t border-slate-800 bg-slate-900/50 backdrop-blur-md shrink-0">
+      <div className="p-3 md:p-4 border-t border-slate-800 bg-slate-950 shrink-0">
         <div className="flex items-center gap-3">
           <input
+            ref={inputRef}
             type="text"
             value={input}
             onChange={(e) => handleInputChange(e.target.value)}
             onKeyDown={handleKeyDown}
+            onFocus={handleInputFocus}
             placeholder="Type a message..."
             className="flex-1 bg-slate-900 border border-slate-700 rounded-full px-5 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500 placeholder:text-slate-500"
           />
