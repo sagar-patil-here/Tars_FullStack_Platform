@@ -1,13 +1,8 @@
 "use client";
 
-import { useUserSync } from "@/hooks/useUserSync";
-
 export default function ChatPage() {
-  // Sync user to Convex on load
-  useUserSync();
-
   return (
-    <div className="flex-1 flex items-center justify-center p-4 bg-slate-950">
+    <div className="flex-1 hidden md:flex items-center justify-center p-4 bg-slate-950">
       <div className="text-center space-y-4 max-w-md mx-auto">
         <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-slate-800">
           <svg

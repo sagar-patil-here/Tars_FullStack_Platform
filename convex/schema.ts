@@ -23,12 +23,13 @@ export default defineSchema({
   // Link table: Users <-> Conversations
   conversationMembers: defineTable({
     conversationId: v.id("conversations"),
-    userId: v.id("users"), // Reference to our internal Convex user ID
+    userId: v.id("users"),
     joinedAt: v.number(),
+    lastReadAt: v.optional(v.number()), // Tracks when the user last read this conversation
   })
   .index("by_conversationId", ["conversationId"])
   .index("by_userId", ["userId"])
-  .index("by_conversationId_userId", ["conversationId", "userId"]), // Compound index for checking membership
+  .index("by_conversationId_userId", ["conversationId", "userId"]),
 
   // Messages table
   messages: defineTable({
