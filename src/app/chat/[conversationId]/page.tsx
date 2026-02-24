@@ -6,7 +6,7 @@ import { useUser } from "@clerk/nextjs";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { formatTimestamp } from "@/lib/formatTimestamp";
+import { formatMessageTime, formatDateSeparator, isDifferentDay } from "@/lib/formatTimestamp";
 import { ArrowLeft, Send, User, ChevronDown } from "lucide-react";
 
 export default function ConversationPage() {
@@ -43,14 +43,12 @@ export default function ConversationPage() {
   const prevMessageCountRef = useRef(0);
   const isNearBottomRef = useRef(true);
 
-  // Mark conversation as read
   useEffect(() => {
     if (conversationId && messages && messages.length > 0) {
       markRead({ conversationId }).catch(console.error);
     }
   }, [conversationId, messages, markRead]);
 
-  // Handle mobile keyboard resize
   useEffect(() => {
     const handleResize = () => {
       if (document.activeElement === inputRef.current) {
@@ -73,23 +71,19 @@ export default function ConversationPage() {
     setNewMessageCount(0);
   }, []);
 
-  // Track whether user is near bottom
   const checkIfNearBottom = useCallback(() => {
     if (!scrollContainerRef.current) return true;
     const container = scrollContainerRef.current;
     return container.scrollHeight - container.scrollTop - container.clientHeight < 100;
   }, []);
 
-  // When new messages arrive
   useEffect(() => {
     if (!messages) return;
-
     const currentCount = messages.length;
     const prevCount = prevMessageCountRef.current;
 
     if (prevCount > 0 && currentCount > prevCount) {
       const newMsgs = currentCount - prevCount;
-
       if (isNearBottomRef.current) {
         scrollToBottom();
       } else {
@@ -97,19 +91,16 @@ export default function ConversationPage() {
         setShowScrollButton(true);
       }
     } else if (prevCount === 0 && currentCount > 0) {
-      // First load — always scroll to bottom
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
       }, 100);
     }
-
     prevMessageCountRef.current = currentCount;
   }, [messages, scrollToBottom]);
 
   const handleScroll = () => {
     const nearBottom = checkIfNearBottom();
     isNearBottomRef.current = nearBottom;
-
     if (nearBottom) {
       setShowScrollButton(false);
       setNewMessageCount(0);
@@ -120,14 +111,11 @@ export default function ConversationPage() {
 
   const handleInputChange = (value: string) => {
     setInput(value);
-
     if (!isTypingRef.current && value.length > 0) {
       isTypingRef.current = true;
       setTyping({ conversationId, isTyping: true }).catch(console.error);
     }
-
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-
     typingTimeoutRef.current = setTimeout(() => {
       isTypingRef.current = false;
       setTyping({ conversationId, isTyping: false }).catch(console.error);
@@ -137,11 +125,9 @@ export default function ConversationPage() {
   const handleSend = async () => {
     const trimmed = input.trim();
     if (!trimmed) return;
-
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     isTypingRef.current = false;
     setTyping({ conversationId, isTyping: false }).catch(console.error);
-
     setInput("");
     try {
       await sendMessage({ conversationId, body: trimmed });
@@ -168,22 +154,17 @@ export default function ConversationPage() {
   return (
     <div className="flex flex-col bg-slate-950 overflow-hidden" style={{ height: "100dvh" }}>
       {/* Chat Header */}
-      <div className="flex items-center gap-3 p-4 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md shrink-0 z-10">
+      <div className="flex items-center gap-3 p-4 border-b border-slate-800 bg-slate-950 shrink-0 z-30 sticky top-0">
         <button
           onClick={() => router.push("/chat")}
           className="md:hidden p-1 rounded-lg hover:bg-slate-800 transition-colors"
         >
           <ArrowLeft className="w-5 h-5 text-slate-400" />
         </button>
-
         <div className="flex items-center gap-3">
           <div className="relative">
             {otherUser?.image ? (
-              <img
-                src={otherUser.image}
-                alt={otherUser.name}
-                className="w-9 h-9 rounded-full object-cover border border-slate-800"
-              />
+              <img src={otherUser.image} alt={otherUser.name} className="w-9 h-9 rounded-full object-cover border border-slate-800" />
             ) : (
               <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
                 <User className="w-4 h-4 text-slate-400" />
@@ -194,15 +175,11 @@ export default function ConversationPage() {
             )}
           </div>
           <div>
-            <p className="font-medium text-sm text-white">
-              {otherUser?.name || "Conversation"}
-            </p>
+            <p className="font-medium text-sm text-white">{otherUser?.name || "Conversation"}</p>
             <p className="text-xs text-slate-500">
               {typingUsers && typingUsers.length > 0
                 ? `${typingUsers.join(", ")} is typing...`
-                : isOtherOnline
-                  ? "Online"
-                  : "Offline"}
+                : isOtherOnline ? "Online" : "Offline"}
             </p>
           </div>
         </div>
@@ -212,7 +189,7 @@ export default function ConversationPage() {
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0"
+        className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-4 min-h-0"
       >
         {messages === undefined ? (
           <div className="flex flex-col gap-4">
@@ -232,60 +209,60 @@ export default function ConversationPage() {
               <div className="w-14 h-14 bg-slate-900 rounded-2xl flex items-center justify-center mx-auto border border-slate-800">
                 <Send className="w-6 h-6 text-slate-500" />
               </div>
-              <p className="text-slate-400 text-sm">
-                No messages yet. Say hi to start the conversation!
-              </p>
+              <p className="text-slate-400 text-sm">No messages yet. Say hi to start the conversation!</p>
             </div>
           </div>
         ) : (
-          messages.map((msg) => {
+          messages.map((msg, index) => {
             const isMe = msg.senderId === currentUser?._id;
+            const prevMsg = index > 0 ? messages[index - 1] : null;
+            const showDateSeparator = !prevMsg || isDifferentDay(prevMsg.createdAt, msg.createdAt);
 
             return (
-              <div
-                key={msg._id}
-                className={`flex gap-3 ${isMe ? "flex-row-reverse" : ""}`}
-              >
-                {!isMe &&
-                  (msg.senderImage ? (
-                    <img
-                      src={msg.senderImage}
-                      alt={msg.senderName}
-                      className="w-8 h-8 rounded-full object-cover flex-shrink-0 border border-slate-800"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center flex-shrink-0 border border-slate-700">
-                      <User className="w-4 h-4 text-slate-400" />
+              <div key={msg._id}>
+                {showDateSeparator && (
+                  <div className="flex items-center justify-center my-4">
+                    <div className="px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-[11px] font-medium text-slate-400">
+                      {formatDateSeparator(msg.createdAt)}
                     </div>
-                  ))}
-
-                <div className={`max-w-[70%] space-y-1 ${isMe ? "items-end" : ""}`}>
-                  {!isMe && (
-                    <p className="text-xs text-slate-500 px-1">{msg.senderName}</p>
-                  )}
-                  <div
-                    className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                      isMe
-                        ? "bg-sky-600 text-white rounded-tr-none shadow-lg shadow-sky-500/10"
-                        : "bg-slate-800 text-slate-200 rounded-tl-none"
-                    }`}
-                  >
-                    {msg.body}
                   </div>
-                  <p
-                    className={`text-[10px] text-slate-600 px-1 ${
-                      isMe ? "text-right" : ""
-                    }`}
-                  >
-                    {formatTimestamp(msg.createdAt)}
-                  </p>
+                )}
+
+                <div className={`flex gap-3 ${isMe ? "flex-row-reverse" : ""}`}>
+                  {!isMe && (
+                    msg.senderImage ? (
+                      <img src={msg.senderImage} alt={msg.senderName} className="w-8 h-8 rounded-full object-cover flex-shrink-0 border border-slate-800" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center flex-shrink-0 border border-slate-700">
+                        <User className="w-4 h-4 text-slate-400" />
+                      </div>
+                    )
+                  )}
+
+                  <div className={`max-w-[70%] space-y-1 ${isMe ? "items-end" : ""}`}>
+                    {!isMe && (
+                      <p className="text-xs text-slate-500 px-1">{msg.senderName}</p>
+                    )}
+                    <div
+                      className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                        isMe
+                          ? "bg-sky-600 text-white rounded-tr-none shadow-lg shadow-sky-500/10"
+                          : "bg-slate-800 text-slate-200 rounded-tl-none"
+                      }`}
+                    >
+                      {msg.body}
+                    </div>
+                    <p className={`text-[10px] text-slate-600 px-1 ${isMe ? "text-right" : ""}`}>
+                      {formatMessageTime(msg.createdAt)}
+                    </p>
+                  </div>
                 </div>
               </div>
             );
           })
         )}
 
-        {/* Typing indicator dots */}
+        {/* Typing indicator */}
         {typingUsers && typingUsers.length > 0 && (
           <div className="flex gap-3">
             <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center flex-shrink-0 border border-slate-700">

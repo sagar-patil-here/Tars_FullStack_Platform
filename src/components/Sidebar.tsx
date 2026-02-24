@@ -10,7 +10,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { Id } from "../../convex/_generated/dataModel";
 import { usePresence } from "@/hooks/usePresence";
 import { useUserSync } from "@/hooks/useUserSync";
-import { formatTimestamp } from "@/lib/formatTimestamp";
+import { formatMessageTime } from "@/lib/formatTimestamp";
 
 export function Sidebar() {
   const { user } = useUser();
@@ -181,7 +181,7 @@ export function Sidebar() {
                         </p>
                         {lastMsg && (
                           <span className="text-[10px] text-slate-600 flex-shrink-0 ml-2">
-                            {formatTimestamp(lastMsg.createdAt)}
+                            {formatMessageTime(lastMsg.createdAt)}
                           </span>
                         )}
                       </div>
