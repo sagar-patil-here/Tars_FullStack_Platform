@@ -167,8 +167,8 @@ export default function ConversationPage() {
 
   return (
     <div className="flex flex-col bg-slate-950 overflow-hidden" style={{ height: "100dvh" }}>
-      {/* Chat Header - Fixed at top */}
-      <div className="flex items-center gap-3 p-4 border-b border-slate-800 bg-slate-950 shrink-0 z-30 sticky top-0">
+      {/* Chat Header */}
+      <div className="flex items-center gap-3 p-4 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md shrink-0 z-10">
         <button
           onClick={() => router.push("/chat")}
           className="md:hidden p-1 rounded-lg hover:bg-slate-800 transition-colors"
@@ -208,11 +208,11 @@ export default function ConversationPage() {
         </div>
       </div>
 
-      {/* Messages Area - Only this section scrolls */}
+      {/* Messages Area */}
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-4 min-h-0"
+        className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0"
       >
         {messages === undefined ? (
           <div className="flex flex-col gap-4">
